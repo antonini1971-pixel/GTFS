@@ -74,6 +74,9 @@ main { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
 .leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
 .leaflet-bar a, .leaflet-control-attribution { background: var(--surface); color: var(--ink); }
 .leaflet-control-attribution a { color: var(--accent); }
+.leaflet-control-layers { background: var(--surface); color: var(--ink); border-radius: var(--radius) !important; }
+.leaflet-control-layers-toggle { filter: none; }
+.tile-warn { max-width: 300px; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-left: 4px solid #c98a00; border-radius: 4px; padding: 8px 10px; font-size: .8rem; line-height: 1.35; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
 .pop h4 { margin: 0 0 2px; font: 700 1.1rem/1.15 var(--f-display); }
 .pop .loc { color: var(--muted); font-size: .8rem; margin-bottom: 8px; }
 .pop .dep { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 6px 8px; align-items: start; max-height: 240px; overflow-y: auto; }
@@ -216,9 +219,32 @@ function tripsOn(l, day) {
 
 /* ---------- mappa ---------- */
 const map = L.map("map", { preferCanvas: true, zoomControl: true, zoomSnap: 0.25 }).setView([41.95, 12.8], 11);
-L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
-}).addTo(map);
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributori OpenStreetMap</a>';
+const BASI = {
+  "OpenStreetMap": L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: OSM_ATTR }),
+  "Trasporto pubblico (ÖPNVKarte)": L.tileLayer("https://tileserver.memomaps.de/tilegen/{z}/{x}/{y}.png", {
+    maxZoom: 18, attribution: 'Mappa <a href="https://memomaps.de/" target="_blank" rel="noopener">memomaps.de</a> CC-BY-SA, dati ' + OSM_ATTR }),
+  "OSM Humanitarian": L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
+    maxZoom: 19, subdomains: "ab", attribution: OSM_ATTR + ', stile <a href="https://www.hotosm.org/" target="_blank" rel="noopener">HOT</a>' }),
+  "OpenTopoMap": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+    maxZoom: 17, subdomains: "abc", attribution: OSM_ATTR + ', <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)' })
+};
+const avvisoTile = L.control({ position: "bottomleft" });
+avvisoTile.onAdd = () => {
+  const d = L.DomUtil.create("div", "tile-warn");
+  d.hidden = true;
+  d.textContent = "Sfondo OpenStreetMap non caricato: questa anteprima non può scaricare le mappe. Apri la pagina in un browser con connessione a internet.";
+  return d;
+};
+avvisoTile.addTo(map);
+let tileOk = 0, tileErr = 0;
+Object.entries(BASI).forEach(([nome, layer]) => {
+  layer.on("tileload", () => { tileOk++; avvisoTile.getContainer().hidden = true; });
+  layer.on("tileerror", () => { tileErr++; if (!tileOk && tileErr >= 4) avvisoTile.getContainer().hidden = false; });
+  layer.on("add", () => { tileOk = 0; tileErr = 0; store.set("udr05-base", nome); });
+});
+(BASI[store.get("udr05-base")] || BASI["OpenStreetMap"]).addTo(map);
+L.control.layers(BASI, null, { position: "topright" }).addTo(map);
 const renderer = L.canvas({ padding: 0.3 });
 const lineLayers = {};
 const allBounds = L.latLngBounds([]);

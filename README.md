@@ -14,14 +14,14 @@ Feed GTFS: `UDR05 GTFS dal 12-10-2026.zip` (Bus International Service, validità
 
 ## Funzioni della pagina
 
-- **Mappa** di tutte le linee con i colori di `routes.txt`; clic su una linea per aprirla.
+- **Mappa** di tutte le linee con i colori di `routes.txt` su sfondo OpenStreetMap, a scelta tra OSM standard, ÖPNVKarte (trasporto pubblico), OSM Humanitarian e OpenTopoMap; clic su una linea per aprirla.
 - **Scelta del giorno**: elenco e tabelle indicano quali calendari sono attivi nella data scelta (festività escluse da `calendar_dates.txt`).
 - **Tabella oraria** per linea: schede per calendario (Lun–Ven, Lun–Sab, Sabato, Domenica e festivi) e per direzione; filtro «solo fermate principali» (fermate `timepoint=1` e capolinea).
 - Clic sul numero di una **corsa** → il suo percorso viene evidenziato sulla mappa.
 - Clic su una **fermata** (in mappa, in tabella o dalla ricerca) → tutte le partenze di quel giorno, per linea e direzione.
 - **Ricerca** di linee e fermate; collegamenti diretti a una linea con `index.html#linea-<route_id>` (es. `#linea-14TV`).
 
-Si apre direttamente nel browser (doppio clic su `docs/index.html`); serve la connessione solo per lo sfondo cartografico OpenStreetMap. Per pubblicarla online basta attivare GitHub Pages sulla cartella `docs/`.
+Si apre direttamente nel browser (doppio clic su `docs/index.html`); serve la connessione solo per lo sfondo cartografico OpenStreetMap, che viene scaricato dal browser al momento. Nelle anteprime che bloccano le risorse esterne (per esempio l'anteprima file dell'app Claude) le linee restano visibili, ma senza sfondo, e la mappa lo segnala. Per pubblicarla online basta attivare GitHub Pages sulla cartella `docs/`.
 
 ## Rigenerare
 

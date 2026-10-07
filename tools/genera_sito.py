@@ -13,6 +13,7 @@ Produce:
 Richiede solo la libreria standard di Python. Leaflet è incluso in tools/vendor.
 """
 
+import base64
 import csv
 import io
 import json
@@ -360,7 +361,11 @@ def main():
     }
 
     html = TEMPLATE.read_text(encoding="utf-8")
-    html = html.replace("/*LEAFLET_CSS*/", (VENDOR / "leaflet.css").read_text(encoding="utf-8"))
+    css = (VENDOR / "leaflet.css").read_text(encoding="utf-8")
+    for img in ("layers.png", "layers-2x.png"):
+        b64 = base64.b64encode((VENDOR / "images" / img).read_bytes()).decode()
+        css = css.replace(f"url(images/{img})", f"url(data:image/png;base64,{b64})")
+    html = html.replace("/*LEAFLET_CSS*/", css)
     html = html.replace("/*LEAFLET_JS*/", (VENDOR / "leaflet.js").read_text(encoding="utf-8").replace("</script", "<\\/script"))
     payload = json.dumps(dati, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = html.replace("/*DATI_GTFS*/null", payload)
