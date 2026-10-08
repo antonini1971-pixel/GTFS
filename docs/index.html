@@ -741,6 +741,7 @@ main { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
 .leaflet-control-attribution a { color: var(--accent); }
 .leaflet-control-layers { background: var(--surface); color: var(--ink); border-radius: var(--radius) !important; }
 .leaflet-control-layers-toggle { filter: none; }
+.leaflet-tooltip { max-width: min(300px, 80vw); white-space: normal; }
 .tile-warn { max-width: 300px; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-left: 4px solid #c98a00; border-radius: 4px; padding: 8px 10px; font-size: .8rem; line-height: 1.35; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
 .pop h4 { margin: 0 0 2px; font: 700 1.1rem/1.15 var(--f-display); }
 .pop .loc { color: var(--muted); font-size: .8rem; margin-bottom: 8px; }
@@ -794,6 +795,42 @@ table.tt tbody tr:last-child td, table.tt tbody tr:last-child th { border-bottom
 footer { grid-column: 1 / -1; font-size: .8rem; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 10px; }
 footer a { color: var(--accent); }
 
+.mapbox { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.mapbox:fullscreen, .mapbox.fs { position: fixed; inset: 0; z-index: 1000; background: var(--bg); padding: 10px; }
+.mapbox:fullscreen #map, .mapbox.fs #map { flex: 1; height: auto; }
+.maptools { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: .88rem; }
+.maptools .grp { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { border: 1px solid var(--rule); background: var(--surface); border-radius: var(--radius); padding: 5px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn:disabled { opacity: .45; cursor: default; color: inherit; border-color: var(--rule); }
+details.zone { position: relative; }
+details.zone > summary { list-style: none; }
+details.zone > summary::-webkit-details-marker { display: none; }
+details.zone .dd { position: absolute; z-index: 1001; top: calc(100% + 4px); left: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); box-shadow: 0 4px 14px rgba(0,0,0,.18); padding: 8px 10px; min-width: 240px; display: grid; gap: 4px; }
+details.zone .dd .row { display: flex; gap: 8px; justify-content: space-between; margin-bottom: 4px; }
+details.zone .dd a { color: var(--accent); cursor: pointer; font-size: .8rem; }
+details.zone .dd label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+details.zone .dd small { color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.vehbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; width: 100%; }
+.vehbar input[type=range] { flex: 1 1 180px; min-width: 140px; accent-color: var(--accent); }
+.vehbar output { font: 700 1.2rem/1 var(--f-display); font-variant-numeric: tabular-nums; min-width: 3.2em; }
+.vehbar .cnt { color: var(--muted); font-size: .82rem; }
+#mstatus { color: var(--muted); font-size: .82rem; }
+.bus-ico span { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; border-radius: 4px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.45); font: 700 .78rem/1 var(--f-display); white-space: nowrap; }
+.me-ico { width: 16px; height: 16px; border-radius: 50%; background: #1a73e8; border: 3px solid #fff; box-shadow: 0 0 0 2px rgba(26,115,232,.35), 0 1px 4px rgba(0,0,0,.4); }
+.near { display: grid; gap: 4px; margin-top: 6px; }
+.near button { all: unset; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--rule); }
+.near button:hover { color: var(--accent); }
+.near small { color: var(--muted); font-variant-numeric: tabular-nums; }
+@media print {
+  aside.index, .maptools, .controls, footer, .leaflet-control-container .leaflet-control-zoom, .leaflet-control-layers, .tile-warn { display: none !important; }
+  .app { display: block; padding: 0; }
+  #map { height: 560px; break-inside: avoid; }
+  .tt-wrap { max-height: none; overflow: visible; }
+  body { background: #fff; }
+}
+
 @media (max-width: 900px) {
   .app { grid-template-columns: minmax(0, 1fr); }
   .lines { max-height: 260px; }
@@ -820,7 +857,29 @@ footer a { color: var(--accent); }
   </aside>
 
   <main>
-    <div id="map" role="region" aria-label="Mappa della rete"></div>
+    <div class="mapbox" id="mapbox">
+      <div id="map" role="region" aria-label="Mappa della rete"></div>
+      <div class="maptools">
+        <div class="grp">
+          <details class="zone" id="zone"><summary class="btn">Zone <span id="zoneCnt"></span> ▾</summary><div class="dd" id="zoneList"></div></details>
+          <label class="chk"><input type="checkbox" id="soloAttive"> Solo linee in servizio nel giorno</label>
+        </div>
+        <div class="grp">
+          <button class="btn" id="vicino" type="button" title="Mostra la tua posizione e le fermate più vicine">◎ Vicino a me</button>
+          <button class="btn" id="schermo" type="button" aria-pressed="false" title="Mappa a schermo intero">⛶ Schermo intero</button>
+          <button class="btn" id="stampa" type="button" title="Stampa mappa e orario">⎙ Stampa</button>
+          <span id="mstatus" role="status"></span>
+        </div>
+        <div class="vehbar">
+          <button class="btn" id="vehOn" type="button" aria-pressed="false" title="Posizione dei bus ricavata dagli orari programmati (non in tempo reale)">🚌 Bus in viaggio</button>
+          <button class="btn" id="vehPlay" type="button" disabled title="Avvia / ferma lo scorrere del tempo">▶</button>
+          <input type="range" id="vehMin" step="1" disabled aria-label="Ora della simulazione">
+          <output id="vehOut">--:--</output>
+          <button class="btn" id="vehNow" type="button" disabled>Adesso</button>
+          <span class="cnt" id="vehCnt"></span>
+        </div>
+      </div>
+    </div>
     <section class="panel" id="pannello"></section>
   </main>
 
@@ -945,7 +1004,7 @@ function stopsOverview() {
   stopLayer.clearLayers();
   Object.keys(stopMarkers).forEach(k => delete stopMarkers[k]);
   STOPS.forEach((s, i) => {
-    if (!stopUse[i].length) return;
+    if (!stopUse[i].some(u => lineVisible(u.l))) return;
     const m = L.circleMarker([s[3], s[4]], { renderer, radius: 3, weight: 1, color: "#fff", fillColor: "#33413c", fillOpacity: .9 });
     m.on("click", () => openStop(i));
     stopMarkers[i] = m;
@@ -1159,9 +1218,227 @@ function drawTrip(c) {
   }
 }
 
+/* ---------- filtri della mappa ---------- */
+const filt = { areas: new Set(JSON.parse(store.get("udr05-zone-off") || "[]")), onlyActive: store.get("udr05-soloAttive") === "1" };
+const AREE = [...new Set(LINEE.map(l => l.area))].sort((a, b) => a.localeCompare(b, "it"));
+function renderZone() {
+  $("#zoneList").innerHTML = `<div class="row"><a data-all="1">tutte</a><a data-all="0">nessuna</a></div>` +
+    AREE.map(a => `<label><input type="checkbox" data-area="${esc(a)}" ${filt.areas.has(a) ? "" : "checked"}> ${esc(a || "Altre linee")}<small>${LINEE.filter(l => l.area === a).length}</small></label>`).join("");
+  const off = AREE.filter(a => filt.areas.has(a)).length;
+  $("#zoneCnt").textContent = off ? `(${AREE.length - off}/${AREE.length})` : "";
+}
+function filtersChanged() {
+  store.set("udr05-zone-off", JSON.stringify([...filt.areas]));
+  store.set("udr05-soloAttive", filt.onlyActive ? "1" : "0");
+  renderZone();
+  styleLines();
+  if (!state.line) { stopsOverview(); updateZoomStops(); }
+}
+$("#zoneList").addEventListener("change", e => {
+  const a = e.target.dataset.area; if (a == null) return;
+  if (e.target.checked) filt.areas.delete(a); else filt.areas.add(a);
+  filtersChanged();
+});
+$("#zoneList").addEventListener("click", e => {
+  const b = e.target.closest("[data-all]"); if (!b) return;
+  filt.areas = b.dataset.all === "1" ? new Set() : new Set(AREE);
+  filtersChanged();
+});
+document.addEventListener("click", e => { const z = $("#zone"); if (z.open && e.target.isConnected && !z.contains(e.target)) z.open = false; });
+$("#soloAttive").checked = filt.onlyActive;
+$("#soloAttive").addEventListener("change", e => { filt.onlyActive = e.target.checked; filtersChanged(); });
+renderZone();
+
+/* ---------- schermo intero e stampa ---------- */
+const mapbox = $("#mapbox");
+function fsOn() { return document.fullscreenElement === mapbox || mapbox.classList.contains("fs"); }
+function fsSync() { $("#schermo").setAttribute("aria-pressed", fsOn()); setTimeout(() => map.invalidateSize(), 60); }
+$("#schermo").addEventListener("click", () => {
+  if (fsOn()) {
+    if (document.fullscreenElement) document.exitFullscreen(); else mapbox.classList.remove("fs");
+  } else if (mapbox.requestFullscreen) {
+    mapbox.requestFullscreen().catch(() => mapbox.classList.add("fs")).finally(fsSync);
+  } else mapbox.classList.add("fs");
+  fsSync();
+});
+document.addEventListener("fullscreenchange", fsSync);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && mapbox.classList.contains("fs")) { mapbox.classList.remove("fs"); fsSync(); } });
+$("#stampa").addEventListener("click", () => window.print());
+window.addEventListener("beforeprint", () => map.invalidateSize());
+
+/* ---------- vicino a me ---------- */
+const meLayer = L.layerGroup().addTo(map);
+function distKm(a, b, c, d) {
+  const r = Math.PI / 180, x = (d - b) * r * Math.cos((a + c) / 2 * r), y = (c - a) * r;
+  return Math.sqrt(x * x + y * y) * 6371;
+}
+$("#vicino").addEventListener("click", () => {
+  const st = $("#mstatus");
+  if (!navigator.geolocation) { st.textContent = "Posizione non disponibile in questo browser."; return; }
+  st.textContent = "Cerco la tua posizione…";
+  navigator.geolocation.getCurrentPosition(pos => {
+    st.textContent = "";
+    const { latitude: la, longitude: lo, accuracy } = pos.coords;
+    const near = STOPS.map((s, i) => [i, distKm(la, lo, s[3], s[4])]).filter(([i]) => stopUse[i].length)
+      .sort((a, b) => a[1] - b[1]).slice(0, 6);
+    meLayer.clearLayers();
+    L.circle([la, lo], { radius: accuracy, color: "#1a73e8", weight: 1, fillOpacity: .08, interactive: false }).addTo(meLayer);
+    const m = L.marker([la, lo], { icon: L.divIcon({ className: "me-ico", iconSize: [16, 16] }), keyboard: false }).addTo(meLayer);
+    const box = document.createElement("div");
+    box.className = "pop";
+    const lontano = near.length && near[0][1] > 20;
+    box.innerHTML = `<h4>Sei qui</h4><div class="loc">${lontano ? "Sei lontano dalla rete UDR05. " : ""}Fermate più vicine:</div><div class="near">` +
+      near.map(([i, d]) => `<button data-s="${i}"><span>${esc(STOPS[i][1])}</span><small>${d < 1 ? Math.round(d * 1000) + " m" : d.toLocaleString("it-IT", { maximumFractionDigits: 1 }) + " km"}</small></button>`).join("") + `</div>`;
+    box.addEventListener("click", e => {
+      const b = e.target.closest("[data-s]"); if (!b) return;
+      const i = +b.dataset.s; map.setView([STOPS[i][3], STOPS[i][4]], Math.max(map.getZoom(), 16)); openStop(i);
+    });
+    m.bindPopup(box, { maxWidth: 320 });
+    if (lontano) map.setView([la, lo], 12); else map.fitBounds(L.latLngBounds([[la, lo], ...near.slice(0, 3).map(([i]) => [STOPS[i][3], STOPS[i][4]])]), { padding: [40, 40], maxZoom: 17 });
+    m.openPopup();
+  }, err => {
+    st.textContent = err.code === 1 ? "Permesso di posizione negato." : "Posizione non trovata.";
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+});
+
+/* ---------- bus in viaggio (da orario programmato) ---------- */
+const veh = { on: false, min: 480, timer: null, layer: L.layerGroup().addTo(map), markers: new Map() };
+const geoCache = {};
+// proietta le fermate servite sul percorso: distanza progressiva (km) di ciascuna fermata
+function tripGeo(c, t) {
+  const served = []; c.o.forEach((v, k) => { if (v != null) served.push(k); });
+  const key = c.shape + "|" + t.fermate.length + "|" + served.map(k => t.fermate[k]).join(",");
+  if (geoCache[key]) return geoCache[key];
+  const pts = shapePts(c.shape);
+  const lat0 = pts.length ? pts[0][0] : 42, kx = 111.32 * Math.cos(lat0 * Math.PI / 180), ky = 110.57;
+  const xy = pts.map(p => [p[1] * kx, p[0] * ky]);
+  const cum = [0];
+  for (let j = 1; j < xy.length; j++) cum.push(cum[j - 1] + Math.hypot(xy[j][0] - xy[j - 1][0], xy[j][1] - xy[j - 1][1]));
+  const proj = (j, x, y) => {
+    const [ax, ay] = xy[j], [bx, by] = xy[j + 1], dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
+    const u = L2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / L2)) : 0;
+    return [Math.hypot(ax + u * dx - x, ay + u * dy - y), cum[j] + u * (cum[j + 1] - cum[j])];
+  };
+  let j0 = 0, s0 = 0;
+  const pos = served.map(k => {
+    const st = STOPS[t.fermate[k]], x = st[4] * kx, y = st[3] * ky;
+    if (xy.length < 2) return { k, s: 0 };
+    let best = null, firstNear = -1;
+    for (let j = j0; j < xy.length - 1; j++) {
+      const [d, s] = proj(j, x, y);
+      if (s < s0 - 1e-6) continue;
+      if (!best || d < best[0]) best = [d, s, j];
+      if (firstNear < 0 && d < 0.08) firstNear = j;
+      if (firstNear >= 0 && j > firstNear + 6) break; // prima occorrenza vicina: utile per le linee circolari
+    }
+    if (!best) return { k, s: s0 };
+    j0 = best[2]; s0 = best[1];
+    return { k, s: best[1] };
+  });
+  return (geoCache[key] = { pts, cum, pos });
+}
+function along(g, s) {
+  const { pts, cum } = g;
+  if (!pts.length) return null;
+  let lo = 0, hi = cum.length - 1;
+  if (s <= 0) return pts[0];
+  if (s >= cum[hi]) return pts[hi];
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (cum[m] <= s) lo = m; else hi = m; }
+  const u = (s - cum[lo]) / ((cum[hi] - cum[lo]) || 1);
+  return [pts[lo][0] + u * (pts[hi][0] - pts[lo][0]), pts[lo][1] + u * (pts[hi][1] - pts[lo][1])];
+}
+function busAt(c, t, m) {
+  const g = tripGeo(c, t), P = g.pos;
+  if (!P.length) return null;
+  const tm = i => c.o[P[i].k];
+  if (m < tm(0) || m > tm(P.length - 1)) return null;
+  let i = 0; while (i < P.length - 2 && tm(i + 1) <= m) i++;
+  const a = tm(i), b = tm(i + 1) ?? a;
+  const f = b > a ? Math.min(1, (m - a) / (b - a)) : 0;
+  const s = P[i].s + f * ((P[i + 1] || P[i]).s - P[i].s);
+  const next = P.find(p => c.o[p.k] > m) || P[P.length - 1];
+  return { ll: along(g, s), next: t.fermate[next.k], at: c.o[next.k] };
+}
+let tRange = [24 * 60, 0];
+LINEE.forEach(l => l.tab.forEach(t => t.corse.forEach(c => c.o.forEach(v => { if (v != null) { tRange[0] = Math.min(tRange[0], v); tRange[1] = Math.max(tRange[1], v); } }))));
+tRange = [Math.floor(tRange[0] / 30) * 30, Math.ceil(tRange[1] / 30) * 30];
+$("#vehMin").min = tRange[0]; $("#vehMin").max = tRange[1];
+function updateVehicles() {
+  if (!veh.on) return;
+  const m = veh.min;
+  $("#vehMin").value = Math.floor(m);
+  $("#vehOut").value = hhmm(Math.floor(m) % 1440);
+  const seen = new Set();
+  LINEE.forEach(l => {
+    if (state.line ? state.line !== l.id : !lineVisible(l)) return;
+    l.tab.forEach(t => {
+      if (!activeOn(t.svc, state.day)) return;
+      t.corse.forEach(c => {
+        const b = busAt(c, t, m); if (!b || !b.ll) return;
+        seen.add(c.id);
+        let mk = veh.markers.get(c.id);
+        if (!mk) {
+          const w = Math.max(26, 10 + 8 * l.n.length);
+          mk = L.marker(b.ll, { keyboard: false, zIndexOffset: 500, icon: L.divIcon({ className: "bus-ico", iconSize: [w, 20], iconAnchor: [w / 2, 10],
+            html: `<span style="background:${l.col};color:${textOn(l.col)}">${esc(l.n)}</span>` }) });
+          mk.bindTooltip("", { direction: "top", offset: [0, -10] });
+          mk.on("click", () => {
+            state.svc = t.svc; state.dir = t.dir;
+            go(l.id);
+            state.trip = c.id; renderLine(); drawTrip(c);
+          });
+          veh.layer.addLayer(mk); veh.markers.set(c.id, mk);
+        } else mk.setLatLng(b.ll);
+        mk.setTooltipContent(`<b>Linea ${esc(l.n)}</b> → ${esc(t.titolo)}<br>prossima fermata: ${esc(STOPS[b.next][1])} (${hhmm(b.at % 1440)})`);
+      });
+    });
+  });
+  veh.markers.forEach((mk, id) => { if (!seen.has(id)) { veh.layer.removeLayer(mk); veh.markers.delete(id); } });
+  $("#vehCnt").textContent = `${seen.size} bus in viaggio · posizioni stimate dagli orari, non in tempo reale`;
+}
+function vehStop() { clearInterval(veh.timer); veh.timer = null; $("#vehPlay").textContent = "▶"; $("#vehPlay").setAttribute("aria-pressed", "false"); }
+function vehNow() {
+  const now = new Date(), today = ymd(now);
+  if (today >= D.feed.dal && today <= D.feed.al && today !== state.day) setDay(today);
+  veh.min = Math.max(tRange[0], Math.min(tRange[1], now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60));
+  updateVehicles();
+}
+$("#vehOn").addEventListener("click", () => {
+  veh.on = !veh.on;
+  $("#vehOn").setAttribute("aria-pressed", veh.on);
+  ["#vehPlay", "#vehMin", "#vehNow"].forEach(s => $(s).disabled = !veh.on);
+  if (veh.on) {
+    const now = new Date();
+    if (ymd(now) === state.day) vehNow(); else { veh.min = Math.max(tRange[0], 7 * 60 + 30); updateVehicles(); }
+  } else {
+    vehStop(); veh.layer.clearLayers(); veh.markers.clear();
+    $("#vehOut").value = "--:--"; $("#vehCnt").textContent = "";
+  }
+});
+$("#vehMin").addEventListener("input", e => { veh.min = +e.target.value; updateVehicles(); });
+$("#vehNow").addEventListener("click", () => { vehStop(); vehNow(); });
+$("#vehPlay").addEventListener("click", () => {
+  if (veh.timer) return vehStop();
+  $("#vehPlay").textContent = "❚❚"; $("#vehPlay").setAttribute("aria-pressed", "true");
+  veh.timer = setInterval(() => {
+    veh.min += 0.25; // 2,5 minuti di orario al secondo
+    if (veh.min > tRange[1]) { veh.min = tRange[1]; vehStop(); }
+    updateVehicles();
+  }, 100);
+});
+
 /* ---------- navigazione ---------- */
+function lineVisible(l) {
+  if (state.line === l.id) return true;
+  if (filt.areas.has(l.area)) return false;
+  if (filt.onlyActive && !tripsOn(l, state.day)) return false;
+  return true;
+}
 function styleLines() {
   LINEE.forEach(l => {
+    const vis = lineVisible(l);
+    if (vis && !map.hasLayer(lineLayers[l.id])) map.addLayer(lineLayers[l.id]);
+    if (!vis && map.hasLayer(lineLayers[l.id])) map.removeLayer(lineLayers[l.id]);
     const sel = !state.line || state.line === l.id;
     lineLayers[l.id].eachLayer(pl => {
       if (pl.options.opacity === 0) return;
@@ -1169,6 +1446,7 @@ function styleLines() {
     });
     if (state.line === l.id) lineLayers[l.id].bringToFront();
   });
+  updateVehicles();
 }
 function go(id) {
   const target = id ? "#linea-" + id : "#";
@@ -1207,6 +1485,7 @@ function setDay(d) {
   $("#daytag").textContent = active.length ? itLong(d) : itLong(d) + " · nessun servizio";
   if (state.line) renderLine(); else renderOverview();
   renderList();
+  if (map) { styleLines(); if (!state.line && filt.onlyActive) stopsOverview(); updateZoomStops(); }
 }
 $("#giorno").min = isoOf(D.feed.dal);
 $("#giorno").max = isoOf(D.feed.al);
