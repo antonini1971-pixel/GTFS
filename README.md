@@ -15,6 +15,7 @@ Feed GTFS: `UDR05 GTFS dal 12-10-2026.zip` (Bus International Service, validità
 ## Funzioni della pagina
 
 - **Mappa** di tutte le linee con i colori di `routes.txt` su sfondo OpenStreetMap, a scelta tra OSM standard, OSM CARTO Voyager, Esri stradale, Esri satellite, ÖPNVKarte (trasporto pubblico), OSM Humanitarian e OpenTopoMap; clic su una linea per aprirla.
+- **Percorsi della linea**: ogni linea mostra tutti i suoi percorsi (shape del GTFS), divisi per direzione e indicati con una lettera (A = percorso principale, B, C… = varianti), con capolinea, fermate in più o saltate rispetto ad A, numero di corse e km. Sulla mappa la direzione scelta è a tratto pieno con le frecce del senso di marcia e i capolinea P (partenza) e A (arrivo); l'altra direzione è tratteggiata. Clic su un percorso per evidenziarlo; nella tabella oraria la lettera sotto il numero della corsa indica il percorso seguito.
 - **Scelta del giorno**: elenco e tabelle indicano quali calendari sono attivi nella data scelta (festività escluse da `calendar_dates.txt`).
 - **Tabella oraria** per linea: schede per calendario (Lun–Ven, Lun–Sab, Sabato, Domenica e festivi) e per direzione; filtro «solo fermate principali» (fermate `timepoint=1` e capolinea).
 - Clic sul numero di una **corsa** → il suo percorso viene evidenziato sulla mappa.

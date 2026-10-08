@@ -77,6 +77,21 @@ main { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
 .leaflet-control-layers { background: var(--surface); color: var(--ink); border-radius: var(--radius) !important; }
 .leaflet-control-layers-toggle { filter: none; }
 .leaflet-tooltip { max-width: min(300px, 80vw); white-space: normal; }
+.perc { margin: 0 0 12px; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.perc h4 { margin: 0 0 4px; font: 600 .75rem var(--f-body); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.perc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.perc button { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: grid; grid-template-columns: 26px 34px minmax(0,1fr); gap: 8px; align-items: center; padding: 5px 8px; border: 1px solid var(--rule); border-radius: 4px; font-size: .84rem; line-height: 1.25; }
+.perc button:hover { background: var(--hl-col); }
+.perc button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.perc button[aria-pressed="true"] { background: var(--hl-col); border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.perc .other { opacity: .7; }
+.perc small { display: block; color: var(--muted); font-size: .75rem; font-variant-numeric: tabular-nums; }
+.vl { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font: 700 .85rem/1 var(--f-display); border: 2px solid; background: var(--surface); }
+table.tt thead th .vl { width: 17px; height: 17px; font-size: .72rem; border-width: 1.5px; margin-top: 2px; }
+table.tt thead th { line-height: 1.1; }
+table.tt .ov { opacity: .35; }
+.arr-ico svg { display: block; filter: drop-shadow(0 0 1px rgba(0,0,0,.6)); }
+.cap-ico span { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font: 700 .7rem/1 var(--f-display); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
 .tile-warn { max-width: 300px; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-left: 4px solid #c98a00; border-radius: 4px; padding: 8px 10px; font-size: .8rem; line-height: 1.35; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
 .pop h4 { margin: 0 0 2px; font: 700 1.1rem/1.15 var(--f-display); }
 .pop .loc { color: var(--muted); font-size: .8rem; margin-bottom: 8px; }
@@ -269,7 +284,45 @@ const shapePts = id => shapeCache[id] || (shapeCache[id] = decode(D.shapes[id] |
 const stopUse = STOPS.map(() => []);
 LINEE.forEach(l => l.tab.forEach(t => t.fermate.forEach((s, i) => stopUse[s].push({ l, t, i }))));
 
-const state = { day: null, line: null, svc: null, dir: null, onlyMain: true, trip: null };
+const state = { day: null, line: null, svc: null, dir: null, onlyMain: true, trip: null, variant: null };
+
+/* ---------- percorsi (varianti) di una linea ---------- */
+// ogni shape del GTFS è un percorso: direzione, capolinea, numero di corse; lettere A, B, … per direzione (A = più corse)
+const percCache = {};
+function percorsiOf(l) {
+  if (percCache[l.id]) return percCache[l.id];
+  const m = new Map();
+  l.tab.forEach(t => t.corse.forEach(c => {
+    let v = m.get(c.shape);
+    if (!v) {
+      const sv = []; c.o.forEach((x, k) => { if (x != null) sv.push(k); });
+      v = { id: c.shape, dir: t.dir, titolo: t.titolo, da: t.fermate[sv[0]], a: t.fermate[sv[sv.length - 1]], n: 0, tabs: [],
+        serv: new Set(sv.map(k => STOPS[t.fermate[k]][1])) };
+      m.set(c.shape, v);
+    }
+    v.n++; if (!v.tabs.includes(t)) v.tabs.push(t);
+  }));
+  const dirs = [...new Set(l.tab.map(t => t.dir))].sort();
+  const out = [];
+  dirs.forEach(d => {
+    const vs = [...m.values()].filter(v => v.dir === d).sort((a, b) => b.n - a.n);
+    vs.forEach((v, i) => { v.lett = String.fromCharCode(65 + i); v.princ = i === 0; v.km = D.shape_km[v.id]; v.multi = vs.length > 1; });
+    // in cosa la variante differisce dal percorso principale (A): fermate in più o saltate
+    vs.slice(1).forEach(v => {
+      const elenco = a => a.length > 3 ? a.slice(0, 3).join(", ") + ` e altre ${a.length - 3}` : a.join(", ");
+      const cap = new Set([v.da, v.a, vs[0].da, vs[0].a].map(i => STOPS[i][1])); // i capolinea sono già scritti
+      const piu = [...v.serv].filter(x => !vs[0].serv.has(x) && !cap.has(x)), meno = [...vs[0].serv].filter(x => !v.serv.has(x) && !cap.has(x));
+      v.diff = [piu.length ? "passa anche da " + elenco(piu) : "", meno.length ? "non passa da " + elenco(meno) : ""].filter(Boolean).join("; ");
+    });
+    out.push(...vs);
+  });
+  return (percCache[l.id] = out);
+}
+const vlett = (v, col) => `<span class="vl" style="border-color:${col}">${v.lett}</span>`;
+function corseNelGiorno(l, v) {
+  let n = 0; l.tab.forEach(t => { if (activeOn(t.svc, state.day)) t.corse.forEach(c => { if (c.shape === v.id) n++; }); });
+  return n;
+}
 
 function activeOn(svc, day) { return svcDates[svc] && svcDates[svc].has(day); }
 function tripsOn(l, day) {
@@ -500,14 +553,19 @@ function renderLine() {
   const esclusi = sv.esclusi.length ? ` Non si effettua: ${sv.esclusi.map(itDate).join(", ")}.` : "";
   const rows = t.fermate.map((s, i) => ({ s, i })).filter(r => !state.onlyMain || t.princ[r.i]);
 
-  let thead = `<tr><th class="stop">Fermata</th>` + t.corse.map((c, k) =>
-    `<th data-k="${k}" title="Corsa ${esc(c.id)} – clicca per vederla sulla mappa" class="${state.trip === c.id ? "sel" : ""}">${k + 1}</th>`).join("") + `</tr>`;
+  const PV = percorsiOf(l), pv = Object.fromEntries(PV.map(v => [v.id, v]));
+  const showLett = t.corse.some(c => pv[c.shape] && pv[c.shape].multi);
+  const cls = c => [state.trip === c.id ? "sel" : "", state.variant && pv[state.variant] && pv[state.variant].dir === t.dir && c.shape !== state.variant ? "ov" : ""].join(" ").trim();
+  let thead = `<tr><th class="stop">Fermata</th>` + t.corse.map((c, k) => {
+    const v = pv[c.shape];
+    return `<th data-k="${k}" title="Corsa ${esc(c.id)}${v ? ` – percorso ${v.lett}` : ""} – clicca per vederla sulla mappa" class="${cls(c)}">${k + 1}${showLett && v ? `<br>${vlett(v, l.col)}` : ""}</th>`;
+  }).join("") + `</tr>`;
   let tbody = rows.map(({ s, i }) => {
     const st = STOPS[s];
     return `<tr class="${t.princ[i] ? "main" : "minor"}"><th class="stop" data-s="${s}">${esc(st[1])}${st[2] ? `<small>${esc(st[2])}</small>` : ""}</th>` +
       t.corse.map(c => {
-        const v = c.o[i]; const sel = state.trip === c.id ? " sel" : "";
-        return v == null ? `<td class="na${sel}">·</td>` : `<td class="${sel.trim()}">${hhmm(v)}</td>`;
+        const v = c.o[i], k = cls(c);
+        return v == null ? `<td class="na ${k}">·</td>` : `<td class="${k}">${hhmm(v)}</td>`;
       }).join("") + `</tr>`;
   }).join("");
 
@@ -523,16 +581,46 @@ function renderLine() {
         `<button data-dir="${esc(x.dir)}" aria-pressed="${x.dir === t.dir}">${esc(x.titolo)}</button>`).join("")}</div>
       <label class="chk"><input type="checkbox" id="soloPrinc" ${state.onlyMain ? "checked" : ""}> Solo fermate principali</label>
     </div>
+    <div class="perc" id="perc">${[...new Set(PV.map(v => v.dir))].map(d => {
+      const vs = PV.filter(v => v.dir === d);
+      return `<div class="${d === t.dir ? "" : "other"}"><h4>${d === t.dir ? "▶ " : ""}${esc(vs[0].titolo)}</h4><ul>${vs.map(v => {
+        const nd = corseNelGiorno(l, v);
+        return `<li><button data-var="${esc(v.id)}" aria-pressed="${state.variant === v.id}" title="Mostra questo percorso sulla mappa">
+          ${vlett(v, l.col)}<svg width="34" height="10" aria-hidden="true"><line x1="1" y1="5" x2="33" y2="5" stroke="${l.col}" stroke-width="4" ${d === t.dir ? "" : 'stroke-dasharray="5 4"'}/></svg>
+          <span>da <b>${esc(STOPS[v.da][1])}</b> a <b>${esc(STOPS[v.a][1])}</b>
+          ${v.diff ? `<small>${esc(cap(v.diff))}</small>` : ""}<small>${v.princ ? (v.multi ? "percorso principale · " : "") : "variante · "}${v.n} ${v.n === 1 ? "corsa" : "corse"} in totale${nd ? `, ${nd} nel giorno` : ", nessuna nel giorno"}${v.km != null ? ` · ${v.km.toLocaleString("it-IT")} km` : ""}</small></span></button></li>`;
+      }).join("")}</ul></div>`;
+    }).join("")}</div>
     <p class="note">${t.corse.length} corse · ${sv.scol ? "periodo scolastico, " : ""}valido dal ${itDate(sv.dal)} al ${itDate(sv.al)}.${esclusi}
       ${activeOn(state.svc, state.day) ? "" : ` <b>Questo calendario non è attivo ${esc(itLong(state.day))}.</b>`}
-      Clicca il numero di una corsa per evidenziarla sulla mappa, o il nome di una fermata per le sue partenze.
+      Sulla mappa la direzione scelta è a tratto pieno con le frecce del senso di marcia (P = partenza, A = arrivo), l'altra è tratteggiata.
+      ${showLett ? "La lettera sotto il numero della corsa indica il percorso seguito. " : ""}Clicca un percorso per evidenziarlo, il numero di una corsa per vederla sulla mappa, o il nome di una fermata per le sue partenze.
       Orari in grassetto: fermate principali; «·» la corsa non passa dalla fermata.</p>
     <div class="tt-wrap"><table class="tt"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
 
   const p = $("#pannello");
   p.querySelector("#tutte").addEventListener("click", e => { e.preventDefault(); go(null); });
   p.querySelectorAll("[data-svc]").forEach(b => b.addEventListener("click", () => { state.svc = b.dataset.svc; state.trip = null; renderLine(); drawTrip(); }));
-  p.querySelectorAll("[data-dir]").forEach(b => b.addEventListener("click", () => { state.dir = b.dataset.dir; state.trip = null; renderLine(); drawTrip(); }));
+  p.querySelectorAll("[data-dir]").forEach(b => b.addEventListener("click", () => { state.dir = b.dataset.dir; state.trip = null; state.variant = null; renderLine(); drawTrip(); }));
+  p.querySelectorAll("[data-var]").forEach(b => {
+    const v = pv[b.dataset.var];
+    b.addEventListener("click", () => {
+      state.trip = null; tripLayer.clearLayers();
+      state.variant = state.variant === v.id ? null : v.id;
+      if (state.variant && v.dir !== state.dir) {
+        state.dir = v.dir;
+        if (!l.tab.some(x => x.svc === state.svc && x.dir === v.dir)) state.svc = (v.tabs.find(x => activeOn(x.svc, state.day)) || v.tabs[0]).svc;
+      }
+      routeHover = null;
+      renderLine();
+      const pts = state.variant ? shapePts(state.variant) : [];
+      const bb = pts.length ? L.latLngBounds(pts) : lineLayers[l.id].getBounds();
+      if (bb.isValid()) map.fitBounds(bb, { padding: [30, 30] });
+    });
+    b.addEventListener("mouseenter", () => drawRoute(v.id));
+    b.addEventListener("mouseleave", () => drawRoute(null));
+  });
+  drawRoute();
   p.querySelector("#soloPrinc").addEventListener("change", e => { state.onlyMain = e.target.checked; store.set("udr05-soloPrinc", state.onlyMain ? "1" : "0"); renderLine(); });
   p.querySelector("thead").addEventListener("click", e => {
     const th = e.target.closest("th[data-k]"); if (!th) return;
@@ -770,6 +858,63 @@ $("#vehPlay").addEventListener("click", () => {
   }, 100);
 });
 
+/* ---------- percorsi della linea scelta sulla mappa ---------- */
+const routeLayer = L.layerGroup().addTo(map);
+const arrowLayer = L.layerGroup().addTo(map);
+let routeHover = null;
+function arrowsAlong(pts, col, step) {
+  const lp = pts.map(p => map.latLngToLayerPoint(p));
+  let next = step / 2, run = 0;
+  for (let j = 1; j < lp.length; j++) {
+    const dx = lp[j].x - lp[j - 1].x, dy = lp[j].y - lp[j - 1].y, d = Math.hypot(dx, dy);
+    while (d > 0 && next <= run + d) {
+      const u = (next - run) / d;
+      const ll = map.layerPointToLatLng(L.point(lp[j - 1].x + u * dx, lp[j - 1].y + u * dy));
+      const deg = Math.atan2(dy, dx) * 180 / Math.PI;
+      arrowLayer.addLayer(L.marker(ll, { interactive: false, keyboard: false, icon: L.divIcon({ className: "arr-ico", iconSize: [14, 14], iconAnchor: [7, 7],
+        html: `<svg width="14" height="14" viewBox="0 0 14 14" style="transform:rotate(${deg.toFixed(1)}deg)"><path d="M3 2 L12 7 L3 12 L5.5 7 Z" fill="#fff" stroke="${col}" stroke-width="1.8" stroke-linejoin="round"/></svg>` }) }));
+      next += step;
+    }
+    run += d;
+  }
+}
+function drawRoute(hover) {
+  if (hover !== undefined) routeHover = hover;
+  routeLayer.clearLayers(); arrowLayer.clearLayers();
+  if (!state.line) return;
+  const l = byId[state.line], PV = percorsiOf(l);
+  const focus = routeHover || state.variant;
+  const fv = PV.find(v => v.id === focus);
+  const curDir = fv ? fv.dir : state.dir;
+  const order = [...PV].sort((a, b) => (a.dir === curDir) - (b.dir === curDir) || (a.id === focus) - (b.id === focus));
+  order.forEach(v => {
+    const pts = shapePts(v.id); if (!pts.length) return;
+    const same = v.dir === curDir, isF = v.id === focus;
+    const opacity = focus ? (isF ? 1 : same ? .35 : .25) : same ? 1 : .55;
+    routeLayer.addLayer(L.polyline(pts, { renderer, color: "#000", weight: isF ? 11 : same ? 8 : 5, opacity: opacity * .22, interactive: false }));
+    const pl = L.polyline(pts, { renderer, color: l.col, weight: isF ? 7 : same ? 5 : 3, opacity, dashArray: same ? null : "7 7" });
+    pl.bindTooltip(`Linea ${esc(l.n)} · percorso ${v.lett}: da ${esc(STOPS[v.da][1])} a ${esc(STOPS[v.a][1])}`, { sticky: true });
+    pl.on("click", () => { const b = document.querySelector(`#perc [data-var="${CSS.escape(v.id)}"]`); if (b) b.click(); });
+    routeLayer.addLayer(pl);
+  });
+  // frecce del senso di marcia e capolinea: il percorso evidenziato, altrimenti tutti quelli della direzione scelta
+  const shown = PV.filter(v => focus ? v.id === focus : v.dir === curDir);
+  shown.forEach(v => {
+    const pts = shapePts(v.id); if (!pts.length) return;
+    arrowsAlong(pts, l.col, shown.length > 1 ? 150 : 110);
+    [[v.da, "P", "Partenza"], [v.a, "A", "Arrivo"]].forEach(([s, ch, lab]) => {
+      const st = STOPS[s];
+      routeLayer.addLayer(L.marker([st[3], st[4]], { keyboard: false, zIndexOffset: 300, icon: L.divIcon({ className: "cap-ico", iconSize: [20, 20], iconAnchor: [10, 10],
+        html: `<span style="background:${l.col};color:${textOn(l.col)};border-radius:${ch === "P" ? "50%" : "3px"}">${ch}</span>` }) })
+        .bindTooltip(`${lab} percorso ${v.lett}: ${esc(st[1])}`, { direction: "top", offset: [0, -10] })
+        .on("click", () => openStop(s)));
+    });
+  });
+  tripLayer.eachLayer(x => x.bringToFront());
+  stopLayer.eachLayer(x => x.bringToFront());
+}
+map.on("zoomend", () => { if (state.line) drawRoute(); });
+
 /* ---------- navigazione ---------- */
 function lineVisible(l) {
   if (state.line === l.id) return true;
@@ -779,7 +924,7 @@ function lineVisible(l) {
 }
 function styleLines() {
   LINEE.forEach(l => {
-    const vis = lineVisible(l);
+    const vis = lineVisible(l) && state.line !== l.id; // la linea scelta è disegnata da drawRoute
     if (vis && !map.hasLayer(lineLayers[l.id])) map.addLayer(lineLayers[l.id]);
     if (!vis && map.hasLayer(lineLayers[l.id])) map.removeLayer(lineLayers[l.id]);
     const sel = !state.line || state.line === l.id;
@@ -797,7 +942,9 @@ function go(id) {
   apply(id);
 }
 function apply(id) {
-  state.line = id && byId[id] ? id : null;
+  const nuova = id && byId[id] ? id : null;
+  if (state.line !== nuova) state.variant = null;
+  state.line = nuova;
   state.trip = null;
   tripLayer.clearLayers();
   map.closePopup();
@@ -814,6 +961,7 @@ function apply(id) {
     updateZoomStops();
     if (allBounds.isValid()) map.fitBounds(allBounds, { padding: [20, 20] });
     renderOverview();
+    drawRoute();
   }
   renderList();
 }

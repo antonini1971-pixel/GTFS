@@ -357,6 +357,7 @@ def main():
         "servizi": servizi,
         "fermate": stops_out,
         "shapes": shapes_out,
+        "shape_km": {k: round(v, 1) for k, v in shape_km.items()},
         "linee": linee,
     }
 
