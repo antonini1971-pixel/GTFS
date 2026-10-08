@@ -951,17 +951,21 @@ function tripsOn(l, day) {
 /* ---------- mappa ---------- */
 const map = L.map("map", { preferCanvas: true, zoomControl: true, zoomSnap: 0.25 }).setView([41.95, 12.8], 11);
 const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributori OpenStreetMap</a>';
-// I server di tile.openstreetmap.org rifiutano le richieste senza "Referer" (pagina aperta come file locale):
-// per questo lo sfondo predefinito è CARTO, che usa gli stessi dati OSM e accetta anche queste richieste.
+// tile.openstreetmap.org e CARTO rifiutano le richieste senza "Referer" (pagina aperta come file locale, doppio clic):
+// in quel caso lo sfondo predefinito è Esri, che le accetta; online (es. GitHub Pages) il predefinito resta OpenStreetMap.
 const LOCALE = location.protocol === "file:";
+const SOLO_ONLINE = LOCALE ? " (solo online)" : "";
 const CARTO_ATTR = OSM_ATTR + ', &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>';
+const ESRI_ATTR = 'Mappa &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> e fornitori';
 const BASI = {
-  "OpenStreetMap (CARTO Voyager)": L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-    maxZoom: 20, subdomains: "abcd", attribution: CARTO_ATTR }),
-  "OpenStreetMap chiaro (CARTO Positron)": L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    maxZoom: 20, subdomains: "abcd", attribution: CARTO_ATTR }),
-  ["OpenStreetMap standard" + (LOCALE ? " (solo online)" : "")]: L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  ["OpenStreetMap" + SOLO_ONLINE]: L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19, attribution: OSM_ATTR, referrerPolicy: "strict-origin-when-cross-origin" }),
+  ["OpenStreetMap CARTO Voyager" + SOLO_ONLINE]: L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    maxZoom: 20, subdomains: "abcd", attribution: CARTO_ATTR }),
+  "Esri stradale": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19, attribution: ESRI_ATTR }),
+  "Esri satellite": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19, attribution: ESRI_ATTR + ', Maxar, Earthstar Geographics' }),
   "Trasporto pubblico (ÖPNVKarte)": L.tileLayer("https://tileserver.memomaps.de/tilegen/{z}/{x}/{y}.png", {
     maxZoom: 18, attribution: 'Mappa <a href="https://memomaps.de/" target="_blank" rel="noopener">memomaps.de</a> CC-BY-SA, dati ' + OSM_ATTR }),
   "OSM Humanitarian": L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
@@ -969,6 +973,7 @@ const BASI = {
   "OpenTopoMap": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
     maxZoom: 17, subdomains: "abc", attribution: OSM_ATTR + ', <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)' })
 };
+const BASE_KEY = "udr05-sfondo-" + (LOCALE ? "file" : "web");
 const avvisoTile = L.control({ position: "bottomleft" });
 avvisoTile.onAdd = () => {
   const d = L.DomUtil.create("div", "tile-warn");
@@ -981,9 +986,9 @@ let tileOk = 0, tileErr = 0;
 Object.entries(BASI).forEach(([nome, layer]) => {
   layer.on("tileload", () => { tileOk++; avvisoTile.getContainer().hidden = true; });
   layer.on("tileerror", () => { tileErr++; if (!tileOk && tileErr >= 4) avvisoTile.getContainer().hidden = false; });
-  layer.on("add", () => { tileOk = 0; tileErr = 0; store.set("udr05-base", nome); });
+  layer.on("add", () => { tileOk = 0; tileErr = 0; store.set(BASE_KEY, nome); });
 });
-(BASI[store.get("udr05-base")] || BASI["OpenStreetMap (CARTO Voyager)"]).addTo(map);
+(BASI[store.get(BASE_KEY)] || BASI[LOCALE ? "Esri stradale" : "OpenStreetMap"]).addTo(map);
 L.control.layers(BASI, null, { position: "topright" }).addTo(map);
 const renderer = L.canvas({ padding: 0.3 });
 const lineLayers = {};
