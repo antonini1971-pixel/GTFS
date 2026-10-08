@@ -26,7 +26,7 @@ Feed GTFS: `UDR05 GTFS dal 12-10-2026.zip` (Bus International Service, validità
   - **Schermo intero** e **Stampa** (mappa e tabella oraria, senza elenco e pulsanti).
 - **Ricerca** di linee e fermate; collegamenti diretti a una linea con `index.html#linea-<route_id>` (es. `#linea-14TV`).
 
-Si apre direttamente nel browser (doppio clic su `docs/index.html`). Aperta come file locale, gli sfondi OpenStreetMap e CARTO vengono rifiutati dai loro server (riquadri «Access blocked» / «API key required»), perché richiedono l'indirizzo del sito di provenienza: in quel caso il predefinito è «Esri stradale». Pubblicata online (GitHub Pages) il predefinito è OpenStreetMap. Serve comunque la connessione per scaricare lo sfondo. Per pubblicarla online basta attivare GitHub Pages sulla cartella `docs/`.
+Si apre direttamente nel browser (doppio clic su `docs/index.html`). Aperta come file locale, gli sfondi OpenStreetMap e CARTO vengono rifiutati dai loro server (riquadri «Access blocked» / «API key required»), perché richiedono l'indirizzo del sito di provenienza: in quel caso questi due sfondi non vengono proposti e il predefinito è «Esri stradale». Pubblicata online (GitHub Pages) il predefinito è OpenStreetMap. Serve comunque la connessione per scaricare lo sfondo. Per pubblicarla online basta attivare GitHub Pages sulla cartella `docs/`.
 
 ## Rigenerare
 
